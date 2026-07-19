@@ -75,64 +75,67 @@
   ];
 
   function recalculateCardArchitecture() {
-    let baseOuterW = 720;
-    let baseOuterH = 860;
-    
-    if (currentRatio === 'mini') baseOuterW = 540;
-    if (currentRatio === 'wide') baseOuterW = 1080;
+    // 1. Establish the base standalone width/height for a single photo slot
+    let baseSlotW = 628; 
+    let baseSlotH = 628; // Square (1:1) default[cite: 1]
+
+    if (currentRatio === 'mini') {
+      baseSlotW = 448;
+      baseSlotH = 628; // Mini (Portrait 3:4 ratio profile)
+    } else if (currentRatio === 'wide') {
+      baseSlotW = 988;
+      baseSlotH = 628; // Wide (Landscape 16:9 ratio profile)
+    }
 
     const marginSide = 46;
     const marginTop = 46;
     const marginBottom = 190; 
+    const gap = 16; // Whitespace separator between chained slots
 
-    let insideW = baseOuterW - (marginSide * 2);
-    let insideH = baseOuterH - marginTop - marginBottom;
+    // 2. Expand card dynamically along the target axis depending on photo count
+    let photoAreaW = baseSlotW;
+    let photoAreaH = baseSlotH;
 
     if (currentCount > 1) {
       if (currentOrient === 'vertical') {
-        baseOuterH = marginTop + (insideH * currentCount) + (16 * (currentCount - 1)) + marginBottom;
+        photoAreaH = (baseSlotH * currentCount) + (gap * (currentCount - 1));
       } else {
-        baseOuterW = marginSide + (insideW * currentCount) + (16 * (currentCount - 1)) + marginSide;
+        photoAreaW = (baseSlotW * currentCount) + (gap * (currentCount - 1));
       }
     }
 
-    cardWidth = baseOuterW;
-    cardHeight = baseOuterH;
+    cardWidth = photoAreaW + (marginSide * 2);
+    cardHeight = marginTop + photoAreaH + marginBottom;
     
     canvas.width = cardWidth;
     canvas.height = cardHeight;
     canvas.style.width = cardWidth + 'px';
 
+    // 3. Map slot placement boxes out with static, un-squished dimensional values
     layoutSlots = [];
-    let photoAreaW = cardWidth - (marginSide * 2);
-    let photoAreaH = cardHeight - marginTop - marginBottom;
-
-    if (currentOrient === 'vertical') {
-      let individualH = (photoAreaH - (16 * (currentCount - 1))) / currentCount;
-      for (let i = 0; i < currentCount; i++) {
+    for (let i = 0; i < currentCount; i++) {
+      if (currentOrient === 'vertical') {
         layoutSlots.push({
           x: marginSide,
-          y: marginTop + i * (individualH + 16),
-          w: photoAreaW,
-          h: individualH
+          y: marginTop + i * (baseSlotH + gap),
+          w: baseSlotW,
+          h: baseSlotH
         });
-      }
-    } else {
-      let individualW = (photoAreaW - (16 * (currentCount - 1))) / currentCount;
-      for (let i = 0; i < currentCount; i++) {
+      } else {
         layoutSlots.push({
-          x: marginSide + i * (individualW + 16),
+          x: marginSide + i * (baseSlotW + gap),
           y: marginTop,
-          w: individualW,
-          h: photoAreaH
+          w: baseSlotW,
+          h: baseSlotH
         });
       }
     }
 
+    // Sync viewfinder interactive targeting overlay borders perfectly
     photoStage.style.left = (marginSide / cardWidth * 100) + '%';
     photoStage.style.top = (marginTop / cardHeight * 100) + '%';
-    photoStage.style.width = ((cardWidth - marginSide * 2) / cardWidth * 100) + '%';
-    photoStage.style.height = ((cardHeight - marginTop - marginBottom) / cardHeight * 100) + '%';
+    photoStage.style.width = (photoAreaW / cardWidth * 100) + '%';
+    photoStage.style.height = (photoAreaH / cardHeight * 100) + '%';
     
     if (currentRatio === 'square') camRatioLabel.textContent = "1:1";
     if (currentRatio === 'mini') camRatioLabel.textContent = "3:4";
@@ -164,7 +167,7 @@
     const local = toLocalDelta(dxScreen, dyScreen);
     const displayScale = canvas.clientWidth / canvas.width;
 
-    // Apply translations directly inside the localized workspace canvas area
+    // Fixed cross-axis panning coordinate bug
     slotState.cx += local.dx / displayScale;
     slotState.cy += local.dy / displayScale;
   }
@@ -612,7 +615,6 @@
         photoCanvas.height = slot.h;
         const pctx = photoCanvas.getContext('2d');
 
-        // --- Pure Object-Fit Cover Vector Computations Engine ---
         const imgW = slotImgState.img.naturalWidth;
         const imgH = slotImgState.img.naturalHeight;
         const imgAspect = imgW / imgH;
@@ -620,16 +622,13 @@
 
         let drawW, drawH;
         if (imgAspect > slotAspect) {
-          // Image landscape profile is wider than targeted partition container slot
           drawH = slot.h * slotImgState.zoom;
           drawW = drawH * imgAspect;
         } else {
-          // Image portrait profile is taller than targeted partition container slot
           drawW = slot.w * slotImgState.zoom;
           drawH = drawW / imgAspect;
         }
 
-        // Align coordinates smoothly based on direct pan delta offsets relative to center bounds
         const xOffset = (slot.w - drawW) / 2 + slotImgState.cx;
         const yOffset = (slot.h - drawH) / 2 + slotImgState.cy;
 
