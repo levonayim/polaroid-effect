@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polaroid Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15120d;
+    --bg-soft:#1c1812;
+    --paper:#f4eedd;
+    --paper-shadow:#d8cdae;
+    --ink:#2b2622;
+    --accent:#b33a3a;
+    --accent-glow:rgba(179,58,58,.35);
+    --muted:#93897a;
+    --line:rgba(244,238,221,.12);
+    --display:'Fraunces', serif;
+    --mono:'IBM Plex Mono', monospace;
+    --hand:'Caveat', cursive;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(179,58,58,.10), transparent 55%),
+      radial-gradient(ellipse at 90% 110%, rgba(179,58,58,.08), transparent 50%),
+      var(--bg);
+    color:var(--paper);
+    font-family:var(--mono);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    max-width:1180px;
+    margin:0 auto;
+    padding:48px 28px 80px;
+  }
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:24px;
+    flex-wrap:wrap;
+    border-bottom:1px solid var(--line);
+    padding-bottom:28px;
+    margin-bottom:44px;
+  }
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--accent);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .eyebrow::before{
+    content:'';
+    width:6px;height:6px;border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 8px 2px var(--accent-glow);
+  }
+  h1{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:clamp(30px,4.2vw,46px);
+    line-height:1.05;
+    margin:10px 0 0;
+    max-width:640px;
+    color:var(--paper);
+  }
+  h1 em{
+    font-style:italic;
+    font-weight:500;
+    color:var(--accent);
+  }
+  .tagline{
+    max-width:300px;
+    font-size:13px;
+    line-height:1.6;
+    color:var(--muted);
+  }
+
+  main{
+    display:grid;
+    grid-template-columns:1.15fr .85fr;
+    gap:36px;
+    align-items:start;
+  }
+  @media (max-width:860px){
+    main{grid-template-columns:1fr;}
+  }
+
+  /* ---- Light table / preview ---- */
+  .table{
+    background:
+      repeating-linear-gradient(0deg, rgba(244,238,221,.03) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(90deg, rgba(244,238,221,.03) 0 1px, transparent 1px 28px),
+      var(--bg-soft);
+    border:1px solid var(--line);
+    border-radius:4px;
+    min-height:560px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow:hidden;
+    padding:40px 20px;
+  }
+  .table-label{
+    position:absolute;
+    top:16px;left:18px;
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .card-wrap{
+    position:relative;
+    transition:transform .25s ease;
+    filter:
+      drop-shadow(0 26px 34px rgba(0,0,0,.55))
+      drop-shadow(0 3px 10px rgba(0,0,0,.35));
+  }
+  #cardCanvas{
+    display:block;
+    width:300px;
+    height:auto;
+    border-radius:2px;
+  }
+  .flash{
+    position:absolute;
+    inset:0;
+    background:#f7f4ea;
+    border-radius:2px;
+    opacity:0;
+    pointer-events:none;
+  }
+  .card-wrap.developing .flash{
+    animation:develop-flash 1.7s ease-out forwards;
+  }
+  .card-wrap.developing #cardCanvas{
+    animation:develop-canvas 1.7s ease-out forwards;
+  }
+  @keyframes develop-flash{
+    0%{opacity:1;}
+    100%{opacity:0;}
+  }
+  @keyframes develop-canvas{
+    0%{filter:contrast(.4) brightness(2) saturate(.2);}
+    100%{filter:contrast(1) brightness(1) saturate(1);}
+  }
+
+  .dropzone{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    cursor:pointer;
+    color:var(--muted);
+    text-align:center;
+    padding:20px;
+  }
+  .dropzone.hidden{display:none;}
+  .dropzone-icon{
+    width:52px;height:52px;
+    border:1.5px dashed var(--muted);
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;
+    color:var(--accent);
+  }
+  .dropzone p{margin:0;font-size:12.5px;line-height:1.6;}
+  .dropzone .hint{font-size:10.5px;color:var(--muted);opacity:.7;}
+  .dropzone.drag-over{color:var(--accent);}
+  .dropzone.drag-over .dropzone-icon{border-color:var(--accent);}
+  #fileInput{display:none;}
+
+  /* ---- Controls rail ---- */
+  .rail{
+    background:var(--bg-soft);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:26px 24px 24px;
+  }
+  .rail h2{
+    font-family:var(--display);
+    font-style:italic;
+    font-weight:500;
+    font-size:18px;
+    margin:0 0 20px;
+    color:var(--paper);
+  }
+  .field{
+    margin-bottom:20px;
+  }
+  .field label{
+    display:flex;
+    justify-content:space-between;
+    font-size:10.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .field label span.val{color:var(--accent);}
+  input[type=range]{
+    -webkit-appearance:none;
+    width:100%;
+    height:2px;
+    background:var(--line);
+    outline:none;
+    margin:0;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:13px;height:13px;
+    border-radius:50%;
+    background:var(--accent);
+    cursor:pointer;
+    box-shadow:0 0 0 3px rgba(179,58,58,.18);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:13px;height:13px;border:none;border-radius:50%;
+    background:var(--accent);cursor:pointer;
+  }
+  input[type=text]{
+    width:100%;
+    background:transparent;
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:9px 10px;
+    color:var(--paper);
+    font-family:var(--hand);
+    font-size:18px;
+    outline:none;
+  }
+  input[type=text]:focus{border-color:var(--accent);}
+  input[type=text]::placeholder{color:var(--muted);font-family:var(--mono);font-size:12px;}
+
+  .toggle-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .switch{
+    position:relative;
+    width:36px;height:20px;
+    background:var(--line);
+    border-radius:20px;
+    cursor:pointer;
+    transition:background .2s;
+    flex:none;
+  }
+  .switch.on{background:var(--accent);}
+  .switch::after{
+    content:'';
+    position:absolute;
+    top:2px;left:2px;
+    width:16px;height:16px;
+    background:var(--paper);
+    border-radius:50%;
+    transition:left .2s;
+  }
+  .switch.on::after{left:18px;}
+
+  .segmented{
+    display:flex;
+    border:1px solid var(--line);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .segmented button{
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.04em;
+    padding:9px 4px;
+    cursor:pointer;
+    border-right:1px solid var(--line);
+  }
+  .segmented button:last-child{border-right:none;}
+  .segmented button.active{background:var(--accent);color:var(--paper);}
+
+  .actions{
+    margin-top:26px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  button.primary{
+    width:100%;
+    background:var(--accent);
+    color:var(--paper);
+    border:none;
+    padding:14px;
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    border-radius:2px;
+    cursor:pointer;
+    transition:filter .15s, transform .15s;
+  }
+  button.primary:hover{filter:brightness(1.12);}
+  button.primary:active{transform:scale(.98);}
+  button.primary:disabled{
+    opacity:.35;
+    cursor:not-allowed;
+  }
+  button.ghost{
+    width:100%;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--muted);
+    padding:11px;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    border-radius:2px;
+    cursor:pointer;
+  }
+  button.ghost:hover{color:var(--paper);border-color:var(--paper);}
+
+  .note{
+    font-size:10.5px;
+    color:var(--muted);
+    line-height:1.6;
+    margin-top:16px;
+    opacity:.75;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div>
+      <div class="eyebrow">Instant Film Utility</div>
+      <h1>Feed it a photo,<br>pull it back <em>warm</em>.</h1>
+    </div>
+    <p class="tagline">Upload an image, let it fade like real instant film, frame it, and lift the finished card out onto a clear background.</p>
+  </header>
+
+  <main>
+    <div class="table">
+      <div class="table-label">Light table — preview</div>
+      <div class="card-wrap" id="cardWrap">
+        <canvas id="cardCanvas" width="760" height="904"></canvas>
+        <div class="flash" id="flash"></div>
+      </div>
+      <div class="dropzone" id="dropzone">
+        <div class="dropzone-icon">↑</div>
+        <p>Drop an image here<br>or click to choose one</p>
+        <p class="hint">JPG, PNG, or WEBP</p>
+      </div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <div class="rail">
+      <h2>Develop</h2>
+
+      <div class="field">
+        <label>Fade <span class="val" id="fadeVal">55</span></label>
+        <input type="range" id="fadeSlider" min="0" max="100" value="55">
+      </div>
+
+      <div class="field">
+        <label>Haze <span class="val" id="hazeVal">55</span></label>
+        <input type="range" id="hazeSlider" min="0" max="100" value="55">
+      </div>
+
+      <div class="field">
+        <label>Grain <span class="val" id="grainVal">20</span></label>
+        <input type="range" id="grainSlider" min="0" max="100" value="20">
+      </div>
+
+      <div class="field">
+        <label>Tilt <span class="val" id="tiltVal">-3°</span></label>
+        <input type="range" id="tiltSlider" min="-10" max="10" value="-3">
+      </div>
+
+      <div class="field">
+        <label>Frame</label>
+        <div class="segmented" id="frameSeg">
+          <button class="active" data-frame="classic">Classic</button>
+          <button data-frame="noir">Noir</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Caption</label>
+        <input type="text" id="captionInput" placeholder="write on the border…" maxlength="40">
+      </div>
+
+      <div class="field toggle-row">
+        <label style="margin:0;">Date stamp</label>
+        <div class="switch on" id="dateToggle"></div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="saveBtn" disabled>Save transparent PNG</button>
+        <button class="ghost" id="resetBtn">Start over</button>
+      </div>
+
+      <p class="note">Export lifts the tilted card, complete with its drop shadow, onto a fully transparent canvas — ready to drop into any layout.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('cardCanvas');
+  const ctx = canvas.getContext('2d');
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const cardWrap = document.getElementById('cardWrap');
+  const flash = document.getElementById('flash');
+  const saveBtn = document.getElementById('saveBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const fadeSlider = document.getElementById('fadeSlider');
+  const hazeSlider = document.getElementById('hazeSlider');
+  const grainSlider = document.getElementById('grainSlider');
+  const tiltSlider = document.getElementById('tiltSlider');
+  const fadeVal = document.getElementById('fadeVal');
+  const hazeVal = document.getElementById('hazeVal');
+  const grainVal = document.getElementById('grainVal');
+  const tiltVal = document.getElementById('tiltVal');
+  const captionInput = document.getElementById('captionInput');
+  const dateToggle = document.getElementById('dateToggle');
+  const frameSeg = document.getElementById('frameSeg');
+
+  // ---- Layout constants (internal working resolution) ----
+  const CARD_W = 760;
+  const MARGIN = 46;
+  const PHOTO_SIZE = CARD_W - MARGIN * 2; // 668
+  const CAPTION_BAND = 190;
+  const CARD_H = MARGIN + PHOTO_SIZE + CAPTION_BAND;
+
+  let sourceImage = null;
+  let dateStampEnabled = true;
+  let frameStyle = 'classic';
+
+  // ---------- Upload handling ----------
+  dropzone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => {
+    if (e.target.files && e.target.files[0]) loadFile(e.target.files[0]);
+  });
+  ['dragenter','dragover'].forEach(evt=>{
+    dropzone.addEventListener(evt, e => {
+      e.preventDefault(); e.stopPropagation();
+      dropzone.classList.add('drag-over');
+    });
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    dropzone.addEventListener(evt, e => {
+      e.preventDefault(); e.stopPropagation();
+      dropzone.classList.remove('drag-over');
+    });
+  });
+  dropzone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) loadFile(file);
+  });
+
+  function loadFile(file){
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const img = new Image();
+      img.onload = () => {
+        sourceImage = img;
+        dropzone.classList.add('hidden');
+        saveBtn.disabled = false;
+        render();
+        triggerDevelop();
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function triggerDevelop(){
+    cardWrap.classList.remove('developing');
+    void cardWrap.offsetWidth; // reflow to restart animation
+    cardWrap.classList.add('developing');
+  }
+
+  resetBtn.addEventListener('click', () => {
+    sourceImage = null;
+    saveBtn.disabled = true;
+    dropzone.classList.remove('hidden');
+    fileInput.value = '';
+    captionInput.value = '';
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    updateTilt();
+  });
+
+  // ---------- Controls ----------
+  fadeSlider.addEventListener('input', () => { fadeVal.textContent = fadeSlider.value; render(); });
+  hazeSlider.addEventListener('input', () => { hazeVal.textContent = hazeSlider.value; render(); });
+  grainSlider.addEventListener('input', () => { grainVal.textContent = grainSlider.value; render(); });
+  tiltSlider.addEventListener('input', () => { updateTilt(); });
+  captionInput.addEventListener('input', render);
+  dateToggle.addEventListener('click', () => {
+    dateStampEnabled = !dateStampEnabled;
+    dateToggle.classList.toggle('on', dateStampEnabled);
+    render();
+  });
+  frameSeg.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    [...frameSeg.children].forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    frameStyle = btn.dataset.frame;
+    render();
+  });
+
+  function updateTilt(){
+    const deg = parseInt(tiltSlider.value, 10);
+    tiltVal.textContent = deg + '°';
+    cardWrap.style.transform = `rotate(${deg}deg)`;
+  }
+  updateTilt();
+
+  // ---------- Cover-fit crop ----------
+  function coverRect(imgW, imgH, targetW, targetH){
+    const srcRatio = imgW / imgH;
+    const dstRatio = targetW / targetH;
+    let sw, sh, sx, sy;
+    if (srcRatio > dstRatio){
+      sh = imgH;
+      sw = imgH * dstRatio;
+      sx = (imgW - sw) / 2;
+      sy = 0;
+    } else {
+      sw = imgW;
+      sh = imgW / dstRatio;
+      sx = 0;
+      sy = (imgH - sh) / 2;
+    }
+    return {sx, sy, sw, sh};
+  }
+
+  // ---------- Film effect ----------
+  function applyFilmEffect(photoCtx, size, fade, grain){
+    const imgData = photoCtx.getImageData(0, 0, size, size);
+    const d = imgData.data;
+    const f = fade / 100;
+    const g = grain / 100;
+    const cx = size / 2, cy = size / 2;
+    const maxDist = Math.sqrt(cx*cx + cy*cy);
+
+    for (let py = 0; py < size; py++){
+      for (let px = 0; px < size; px++){
+        const i = (py * size + px) * 4;
+        let r = d[i], gg = d[i+1], b = d[i+2];
+
+        // lift shadows hard toward a warm peach-cream, always-on baseline plus fade-scaled extra
+        r = r + (252 - r) * (0.14 + 0.10*f);
+        gg = gg + (226 - gg) * (0.10 + 0.09*f);
+        b = b + (196 - b) * (0.05 + 0.07*f);
+
+        // compress / blow out highlights (soft clip) for that washed, sun-faded look
+        const lumH = 0.299*r + 0.587*gg + 0.114*b;
+        if (lumH > 150){
+          const t = (lumH - 150) / 105; // 0..1 as it approaches white
+          const boost = Math.min(1, t) * (0.35 + 0.35*f);
+          r = r + (255 - r) * boost;
+          gg = gg + (255 - gg) * boost;
+          b = b + (255 - b) * boost;
+        }
+
+        // desaturate toward luminance, more than before
+        const lum = 0.299*r + 0.587*gg + 0.114*b;
+        r = r + (lum - r) * (0.20 + 0.14*f);
+        gg = gg + (lum - gg) * (0.20 + 0.14*f);
+        b = b + (lum - b) * (0.20 + 0.14*f);
+
+        // gentle overall contrast reduction
+        r = 128 + (r - 128) * (1 - (0.22 + 0.14*f));
+        gg = 128 + (gg - 128) * (1 - (0.22 + 0.14*f));
+        b = 128 + (b - 128) * (1 - (0.22 + 0.14*f));
+
+        // vignette, warm-tinted rather than neutral grey
+        const dist = Math.sqrt((px-cx)*(px-cx) + (py-cy)*(py-cy)) / maxDist;
+        const vig = 1 - Math.pow(dist, 2.4) * (0.22 + 0.16*f);
+        r = r * vig + 8 * (1-vig);
+        gg = gg * vig + 4 * (1-vig);
+        b = b * vig;
+
+        // grain
+        if (g > 0){
+          const n = (Math.random() * 2 - 1) * 26 * g;
+          r += n; gg += n; b += n;
+        }
+
+        d[i]   = Math.max(0, Math.min(255, r));
+        d[i+1] = Math.max(0, Math.min(255, gg));
+        d[i+2] = Math.max(0, Math.min(255, b));
+      }
+    }
+    photoCtx.putImageData(imgData, 0, 0);
+  }
+
+  // ---------- Soft focus / glow (the "fuzziness") ----------
+  function applyHaze(photoCanvas, size, haze){
+    const h = haze / 100;
+    if (h <= 0) return;
+    const pctx = photoCanvas.getContext('2d');
+
+    // blurred duplicate, screen-blended back on top for a dreamy glow
+    const blurPx = 1.5 + h * 9;
+    const softCanvas = document.createElement('canvas');
+    softCanvas.width = size; softCanvas.height = size;
+    const sctx = softCanvas.getContext('2d');
+    sctx.filter = `blur(${blurPx}px)`;
+    sctx.drawImage(photoCanvas, 0, 0);
+
+    pctx.save();
+    pctx.globalCompositeOperation = 'screen';
+    pctx.globalAlpha = 0.30 + 0.30 * h;
+    pctx.drawImage(softCanvas, 0, 0);
+    pctx.restore();
+
+    // a light leak in one corner, like sun-warmed film stock
+    pctx.save();
+    const grad = pctx.createRadialGradient(
+      size*0.82, size*0.10, 0,
+      size*0.82, size*0.10, size*0.85
+    );
+    grad.addColorStop(0, `rgba(255,238,214,${0.45*h})`);
+    grad.addColorStop(1, 'rgba(255,238,214,0)');
+    pctx.globalCompositeOperation = 'screen';
+    pctx.fillStyle = grad;
+    pctx.fillRect(0, 0, size, size);
+    pctx.restore();
+  }
+
+  // ---------- Cached paper-fiber texture for the frame border ----------
+  let paperTexture = null;
+  function getPaperTexture(){
+    if (paperTexture) return paperTexture;
+    const t = document.createElement('canvas');
+    t.width = 180; t.height = 180;
+    const tctx = t.getContext('2d');
+    const imgData = tctx.createImageData(180, 180);
+    for (let i = 0; i < imgData.data.length; i += 4){
+      const v = 232 + Math.random() * 23; // 232-255
+      imgData.data[i] = v;
+      imgData.data[i+1] = v;
+      imgData.data[i+2] = v;
+      imgData.data[i+3] = 255;
+    }
+    tctx.putImageData(imgData, 0, 0);
+    paperTexture = t;
+    return t;
+  }
+
+  // ---------- Main render ----------
+  function render(){
+    ctx.clearRect(0, 0, CARD_W, CARD_H);
+
+    const frameColor = frameStyle === 'noir' ? '#171512' : '#f4eedd';
+    const inkColor = frameStyle === 'noir' ? '#efe6d6' : '#2b2622';
+    const dateColor = '#ff8a1f';
+
+    // frame
+    ctx.fillStyle = frameColor;
+    roundRect(ctx, 0, 0, CARD_W, CARD_H, 6);
+    ctx.fill();
+
+    // subtle paper-fiber texture across the whole card (covered by the photo later)
+    ctx.save();
+    roundRect(ctx, 0, 0, CARD_W, CARD_H, 6);
+    ctx.clip();
+    const pattern = ctx.createPattern(getPaperTexture(), 'repeat');
+    ctx.globalCompositeOperation = frameStyle === 'noir' ? 'overlay' : 'multiply';
+    ctx.globalAlpha = frameStyle === 'noir' ? 0.10 : 0.55;
+    ctx.fillStyle = pattern;
+    ctx.fillRect(0, 0, CARD_W, CARD_H);
+    ctx.restore();
+
+    if (!sourceImage){
+      // empty placeholder square
+      ctx.fillStyle = frameStyle === 'noir' ? '#2a2622' : '#e3d9c0';
+      ctx.fillRect(MARGIN, MARGIN, PHOTO_SIZE, PHOTO_SIZE);
+      drawCaption(inkColor);
+      return;
+    }
+
+    // build photo on offscreen canvas
+    const photoCanvas = document.createElement('canvas');
+    photoCanvas.width = PHOTO_SIZE;
+    photoCanvas.height = PHOTO_SIZE;
+    const pctx = photoCanvas.getContext('2d');
+    const crop = coverRect(sourceImage.naturalWidth, sourceImage.naturalHeight, PHOTO_SIZE, PHOTO_SIZE);
+    pctx.drawImage(sourceImage, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
+
+    applyFilmEffect(pctx, PHOTO_SIZE, parseInt(fadeSlider.value,10), parseInt(grainSlider.value,10));
+    applyHaze(photoCanvas, PHOTO_SIZE, parseInt(hazeSlider.value,10));
+
+    // date stamp on the photo itself
+    if (dateStampEnabled){
+      const d = new Date();
+      const stamp = String(d.getMonth()+1).padStart(2,'0') + ' ' +
+                    String(d.getDate()).padStart(2,'0') + ' ' +
+                    String(d.getFullYear()).slice(-2);
+      pctx.font = '600 22px "IBM Plex Mono", monospace';
+      pctx.textAlign = 'right';
+      pctx.textBaseline = 'bottom';
+      pctx.shadowColor = 'rgba(255,138,31,.55)';
+      pctx.shadowBlur = 6;
+      pctx.fillStyle = dateColor;
+      pctx.fillText(stamp, PHOTO_SIZE - 22, PHOTO_SIZE - 20);
+      pctx.shadowBlur = 0;
+    }
+
+    ctx.drawImage(photoCanvas, MARGIN, MARGIN);
+
+    // inset border line around photo
+    ctx.strokeStyle = 'rgba(0,0,0,.18)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(MARGIN + 0.5, MARGIN + 0.5, PHOTO_SIZE - 1, PHOTO_SIZE - 1);
+
+    drawCaption(inkColor);
+  }
+
+  function drawCaption(inkColor){
+    const text = captionInput.value.trim();
+    if (!text) return;
+    ctx.font = '500 46px "Caveat", cursive';
+    ctx.fillStyle = inkColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const bandCenterY = MARGIN + PHOTO_SIZE + CAPTION_BAND / 2 + 6;
+    ctx.fillText(text, CARD_W / 2, bandCenterY, PHOTO_SIZE);
+  }
+
+  function roundRect(c, x, y, w, h, r){
+    c.beginPath();
+    c.moveTo(x+r, y);
+    c.arcTo(x+w, y, x+w, y+h, r);
+    c.arcTo(x+w, y+h, x, y+h, r);
+    c.arcTo(x, y+h, x, y, r);
+    c.arcTo(x, y, x+w, y, r);
+    c.closePath();
+  }
+
+  render();
+
+  // ---------- Export: transparent PNG with rotated card + shadow ----------
+  saveBtn.addEventListener('click', () => {
+    if (!sourceImage) return;
+
+    const angleDeg = parseInt(tiltSlider.value, 10);
+    const angle = angleDeg * Math.PI / 180;
+
+    const w = CARD_W, h = CARD_H;
+    const cos = Math.abs(Math.cos(angle));
+    const sin = Math.abs(Math.sin(angle));
+    const boundW = w * cos + h * sin;
+    const boundH = w * sin + h * cos;
+
+    const shadowPad = 90; // room for the drop shadow blur
+    const outW = Math.ceil(boundW + shadowPad * 2);
+    const outH = Math.ceil(boundH + shadowPad * 2);
+
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = outW;
+    outCanvas.height = outH;
+    const octx = outCanvas.getContext('2d');
+
+    octx.save();
+    octx.translate(outW / 2, outH / 2);
+    octx.rotate(angle);
+
+    octx.shadowColor = 'rgba(0,0,0,0.55)';
+    octx.shadowBlur = 42;
+    octx.shadowOffsetX = 0;
+    octx.shadowOffsetY = 22;
+
+    octx.drawImage(canvas, -w / 2, -h / 2, w, h);
+    octx.restore();
+
+    const link = document.createElement('a');
+    link.download = 'polaroid.png';
+    link.href = outCanvas.toDataURL('image/png');
+    link.click();
+  });
+
+})();
+</script>
+</body>
+</html>
