@@ -59,13 +59,13 @@
   let cardHeight = 904;
   let layoutSlots = []; 
   let activeSlotIndex = null; 
-  let uploadTargetIndex = null; // Tracks if a user is targeting a single precise slot
+  let uploadTargetIndex = null; 
 
   const activePointers = new Map();
   let pinchStartDist = null;
   let pinchStartZoom = 1;
   let lastSingleX = null, lastSingleY = null;
-  let dragDistance = 0; // Tracks motion threshold to distinguish pans from taps
+  let dragDistance = 0; 
   let rafPending = false;
 
   const filtersList = [
@@ -161,30 +161,12 @@
   function panBy(dxScreen, dyScreen){
     if (activeSlotIndex === null || !sourceImages[activeSlotIndex]) return;
     const slotState = sourceImages[activeSlotIndex];
-    const targetBounds = layoutSlots[activeSlotIndex];
-    
     const local = toLocalDelta(dxScreen, dyScreen);
     const displayScale = canvas.clientWidth / canvas.width;
-    const localCanvasDx = local.dx / displayScale;
-    const localCanvasDy = local.dy / displayScale;
 
-    const aspectImage = slotState.img.naturalWidth / slotState.img.naturalHeight;
-    const aspectTarget = targetBounds.w / targetBounds.h;
-    
-    let baseScaleWidth, baseScaleHeight;
-    if (aspectImage > aspectTarget) {
-      baseScaleHeight = slotState.img.naturalHeight;
-      baseScaleWidth = slotState.img.naturalHeight * aspectTarget;
-    } else {
-      baseScaleWidth = slotState.img.naturalWidth;
-      baseScaleHeight = slotState.img.naturalWidth / aspectTarget;
-    }
-
-    const currentCropW = baseScaleWidth / slotState.zoom;
-    const currentCropH = baseScaleHeight / slotState.zoom;
-
-    slotState.cx -= localCanvasDx * (currentCropW / targetBounds.w);
-    slotState.cy -= localCanvasDy * (currentCropH / targetBounds.h);
+    // Apply translations directly inside the localized workspace canvas area
+    slotState.cx += local.dx / displayScale;
+    slotState.cy += local.dy / displayScale;
   }
 
   function determineSlotIndexFromEvent(e) {
@@ -245,7 +227,6 @@
   });
 
   function endPointer(e){
-    // If the pointer finishes under a tiny motion threshold, treat it as a deliberate single slot tap
     if (activePointers.size === 1 && dragDistance < 6) {
       uploadTargetIndex = activeSlotIndex;
       fileInput.removeAttribute('multiple');
@@ -279,7 +260,7 @@
   }, { passive: false });
 
   dropzone.addEventListener('click', () => {
-    uploadTargetIndex = null; // Standard master deck drop distributes images sequentially
+    uploadTargetIndex = null; 
     fileInput.setAttribute('multiple', 'multiple');
     fileInput.click();
   });
@@ -312,7 +293,6 @@
     if (filesArray.length === 0) return;
 
     if (uploadTargetIndex !== null) {
-      // Isolated pipeline execution targeted to one explicit canvas sub-slot partition
       const reader = new FileReader();
       reader.onload = evt => {
         const img = new Image();
@@ -320,8 +300,8 @@
           sourceImages[uploadTargetIndex] = {
             img: img,
             zoom: 1,
-            cx: img.naturalWidth / 2,
-            cy: img.naturalHeight / 2
+            cx: 0,
+            cy: 0
           };
           dropzone.classList.add('hidden');
           photoStage.classList.add('active');
@@ -334,7 +314,6 @@
       };
       reader.readAsDataURL(filesArray[0]);
     } else {
-      // Master distribution mode over all slots sequential order
       let loadedCounter = 0;
       let limit = Math.min(filesArray.length, currentCount);
 
@@ -346,8 +325,8 @@
             sourceImages[index] = {
               img: img,
               zoom: 1,
-              cx: img.naturalWidth / 2,
-              cy: img.naturalHeight / 2
+              cx: 0,
+              cy: 0
             };
             loadedCounter++;
             if (loadedCounter === limit) finalizeAssetPipeline();
@@ -360,14 +339,13 @@
   }
 
   function finalizeAssetPipeline() {
-    // Fill empty remaining spots using the first valid element asset if needed as a padding architecture
     for (let i = 0; i < currentCount; i++) {
       if (!sourceImages[i] && sourceImages[0]) {
         sourceImages[i] = {
           img: sourceImages[0].img,
           zoom: 1,
-          cx: sourceImages[0].img.naturalWidth / 2,
-          cy: sourceImages[0].img.naturalHeight / 2
+          cx: 0,
+          cy: 0
         };
       }
     }
@@ -515,46 +493,16 @@
     cardWrap.style.transform = `rotate(${deg}deg)`;
   }
 
-  // ---------- Bulletproof Aspect Scale & Object-Cover Calculation Engine ----------
-  function getCropRect(img, zoom, cx, cy, targetW, targetH){
-    const iw = img.naturalWidth;
-    const ih = img.naturalHeight;
-    
-    let sw = iw;
-    let sh = ih;
-    const targetAspect = targetW / targetH;
-    const imgAspect = iw / ih;
-    
-    if (imgAspect > targetAspect) {
-      // Image is wider than the frame container -> sample height fully, slice proportional width components
-      sw = ih * targetAspect;
-      sh = ih;
-    } else {
-      // Image is taller than the frame container -> sample width fully, slice proportional height components
-      sw = iw;
-      sh = iw / targetAspect;
+  function photoStageDblClick(e) {
+    const targetedSlot = determineSlotIndexFromEvent(e);
+    if (sourceImages[targetedSlot]) {
+      sourceImages[targetedSlot].zoom = 1;
+      sourceImages[targetedSlot].cx = 0;
+      sourceImages[targetedSlot].cy = 0;
+      render();
     }
-    
-    // Zoom modifies sample window parameters securely
-    sw /= zoom;
-    sh /= zoom;
-    
-    // Align core crop boundaries centered around the target pixel structural coordinates
-    let sx = cx - sw / 2;
-    let sy = cy - sh / 2;
-    
-    // Clamp to valid canvas assets geometry vectors strictly
-    if (sx < 0) sx = 0;
-    if (sy < 0) sy = 0;
-    if (sx + sw > iw) sx = iw - sw;
-    if (sy + sh > ih) sy = ih - sh;
-    
-    // Hard protective scaling boundaries logic parameters setup fallback
-    if (sw > iw) { sx = 0; sw = iw; }
-    if (sh > ih) { sy = 0; sh = ih; }
-    
-    return { sx, sy, sw, sh };
   }
+  photoStage.addEventListener('dblclick', photoStageDblClick);
 
   function processInstagramFilter(r, g, b, filterName) {
     switch (filterName) {
@@ -659,11 +607,33 @@
       if (!slotImgState) {
         ctx.fillStyle = frameStyle === 'noir' ? '#2a2622' : '#f0ebdf'; ctx.fillRect(slot.x, slot.y, slot.w, slot.h);
       } else {
-        const photoCanvas = document.createElement('canvas'); photoCanvas.width = slot.w; photoCanvas.height = slot.h;
+        const photoCanvas = document.createElement('canvas'); 
+        photoCanvas.width = slot.w; 
+        photoCanvas.height = slot.h;
         const pctx = photoCanvas.getContext('2d');
-        const crop = getCropRect(slotImgState.img, slotImgState.zoom, slotImgState.cx, slotImgState.cy, slot.w, slot.h);
-        
-        pctx.drawImage(slotImgState.img, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, slot.w, slot.h);
+
+        // --- Pure Object-Fit Cover Vector Computations Engine ---
+        const imgW = slotImgState.img.naturalWidth;
+        const imgH = slotImgState.img.naturalHeight;
+        const imgAspect = imgW / imgH;
+        const slotAspect = slot.w / slot.h;
+
+        let drawW, drawH;
+        if (imgAspect > slotAspect) {
+          // Image landscape profile is wider than targeted partition container slot
+          drawH = slot.h * slotImgState.zoom;
+          drawW = drawH * imgAspect;
+        } else {
+          // Image portrait profile is taller than targeted partition container slot
+          drawW = slot.w * slotImgState.zoom;
+          drawH = drawW / imgAspect;
+        }
+
+        // Align coordinates smoothly based on direct pan delta offsets relative to center bounds
+        const xOffset = (slot.w - drawW) / 2 + slotImgState.cx;
+        const yOffset = (slot.h - drawH) / 2 + slotImgState.cy;
+
+        pctx.drawImage(slotImgState.img, xOffset, yOffset, drawW, drawH);
 
         applyFilmEffect(pctx, slot.w, slot.h, parseInt(fadeSlider.value, 10), parseInt(grainSlider.value, 10));
         applyHaze(photoCanvas, slot.w, slot.h, parseInt(hazeSlider.value, 10));
