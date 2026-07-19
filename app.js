@@ -26,11 +26,13 @@
   const countSeg = document.getElementById('countSeg');
   const orientSeg = document.getElementById('orientSeg');
   const orientationField = document.getElementById('orientationField');
+  const filterSelect = document.getElementById('filterSelect');
 
   // ---------- Configurable Layout States ----------
   let currentRatio = 'square'; 
   let currentCount = 1;        
   let currentOrient = 'vertical'; 
+  let currentFilter = 'none';
   
   let sourceImages = []; 
   let dateStampEnabled = true;
@@ -340,6 +342,8 @@
     stageHint.classList.remove('show');
     fileInput.value = '';
     captionInput.value = '';
+    filterSelect.value = 'none';
+    currentFilter = 'none';
     ctx.clearRect(0,0,canvas.width,canvas.height);
     updateTilt();
     render();
@@ -379,6 +383,11 @@
     btn.classList.add('active');
     currentOrient = btn.dataset.orient;
     recalculateCardArchitecture();
+    render();
+  });
+
+  filterSelect.addEventListener('change', e => {
+    currentFilter = e.target.value;
     render();
   });
 
@@ -433,6 +442,89 @@
     return { sx, sy, sw: cropW, sh: cropH };
   }
 
+  // ---------- Advanced LUT/Instagram Filter Shader Mapping Matrix ----------
+  function processInstagramFilter(r, g, b, filterName) {
+    switch (filterName) {
+      case 'clarendon': // Boost highlights & deepen shadow channels
+        r = r > 128 ? r + (255 - r) * 0.12 : r * 0.95;
+        g = g > 128 ? g + (255 - g) * 0.15 : g * 0.98;
+        b = b > 128 ? b + (255 - b) * 0.22 : b * 0.90;
+        break;
+      case 'juno': // Vivid red/yellow enhancements
+        r *= 1.18; g *= 1.05; b *= 0.88;
+        break;
+      case 'lark': // Cool down greens and desaturate values
+        r *= 1.02; g *= 0.92; b *= 1.12;
+        break;
+      case 'reyes': // Faded, low contrast, vintage warm tint
+        r = r * 0.85 + 35; g = g * 0.85 + 30; b = b * 0.75 + 20;
+        break;
+      case 'valencia': // Antique warm yellow overlay glow
+        r *= 1.12; g *= 1.08; b *= 0.82;
+        r = r * 0.9 + 15;
+        break;
+      case 'gotham': // Stark monochrome deep blue cinematic shadow
+        let lumG = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = lumG * 0.9; g = lumG * 0.95; b = lumG * 1.15;
+        if (b > 100) b += (255 - b) * 0.1;
+        break;
+      case 'xpro2': // Cross processed hard vignettes and teal contrast
+        r = r < 128 ? r * 0.85 : r + (255 - r) * 0.15;
+        g = g * 1.05;
+        b = b < 128 ? b * 1.22 : b * 0.78;
+        break;
+      case 'lofi': // High-saturation hard-contrast push
+        r = r < 128 ? (r * r) / 128 : 255 - ((255 - r) * (255 - r)) / 128;
+        g = g < 128 ? (g * g) / 128 : 255 - ((255 - g) * (255 - g)) / 128;
+        b = b < 128 ? (b * b) / 128 : 255 - ((255 - b) * (255 - b)) / 128;
+        r *= 1.12; g *= 1.12;
+        break;
+      case 'aden': // Soft cream pastel low-mid tones
+        r = r * 0.9 + 25; g = g * 0.88 + 20; b = b * 0.85 + 30;
+        break;
+      case 'perpetua': // Earthy warm greens & deep turquoise accents
+        g *= 1.06; b *= 1.04;
+        break;
+      case 'crema': // Warm desaturated matte look
+        r = r * 0.92 + 15; g = g * 0.90 + 15; b = b * 0.82 + 25;
+        let lC = 0.3 * r + 0.59 * g + 0.11 * b;
+        r = r + (lC - r) * 0.2; g = g + (lC - g) * 0.2; b = b + (lC - b) * 0.2;
+        break;
+      case 'ludwig': // Clean flash reds pop while losing greens
+        r *= 1.15; g *= 0.95; b *= 0.95;
+        break;
+      case 'slumber': // Dreamy retro yellow-green wash shift
+        r = r * 0.9 + 20; g = g * 0.95 + 10; b = b * 0.82;
+        break;
+      case 'gingham': // Muted highlights with faded light grey-blue base
+        r = r * 0.85 + 30; g = g * 0.85 + 32; b = b * 0.88 + 35;
+        break;
+      case 'mayfair': // Pink hue border balance with slight saturation drop
+        r *= 1.10; g *= 0.96; b *= 1.02;
+        break;
+      case 'rise': // Low light warming filter emulation
+        r = r < 128 ? r + (128 - r) * 0.18 : r;
+        g = g < 128 ? g + (128 - g) * 0.12 : g;
+        b *= 0.88;
+        break;
+      case 'hudson': // Icy cold tinting with high brightness
+        r *= 0.88; g *= 1.02; b *= 1.15;
+        break;
+      case 'sierra': // Autumn morning foggy desaturated low contrast
+        r = r * 0.88 + 25; g = g * 0.88 + 20; b = b * 0.82 + 15;
+        break;
+      case 'willow': // Soft monochrome matte with purple-grey shadow elements
+        let lW = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = lW * 0.95 + 10; g = lW * 0.92 + 10; b = lW * 0.98 + 12;
+        break;
+      case 'inkwell': // Direct harsh black & white values setup
+        let lI = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = g = b = lI < 128 ? (lI * lI) / 128 : 255 - ((255 - lI) * (255 - lI)) / 128;
+        break;
+    }
+    return { r, g, b };
+  }
+
   function applyFilmEffect(photoCtx, w, h, fade, grain){
     const imgData = photoCtx.getImageData(0, 0, w, h);
     const d = imgData.data;
@@ -445,6 +537,12 @@
       for (let px = 0; px < w; px++){
         const i = (py * w + px) * 4;
         let r = d[i], gg = d[i+1], b = d[i+2];
+
+        // Apply selected Instagram lookup algorithm prior to chemical processing
+        if (currentFilter !== 'none') {
+          const processed = processInstagramFilter(r, gg, b, currentFilter);
+          r = processed.r; gg = processed.g; b = processed.b;
+        }
 
         r = r + (252 - r) * (0.14 + 0.10*f);
         gg = gg + (226 - gg) * (0.10 + 0.09*f);
@@ -540,8 +638,9 @@
   function render(){
     ctx.clearRect(0, 0, cardWidth, cardHeight);
 
-    const frameColor = frameStyle === 'noir' ? '#171512' : '#f4eedd';
-    const inkColor = frameStyle === 'noir' ? '#efe6d6' : '#2b2622';
+    // Frame setup updated: Classic is now clean white (#ffffff)
+    const frameColor = frameStyle === 'noir' ? '#171512' : '#ffffff';
+    const inkColor = '#2b2622'; // Keep readable elegant black ink markers across variants
     const dateColor = '#ff8a1f';
 
     ctx.fillStyle = frameColor;
@@ -553,7 +652,7 @@
     ctx.clip();
     const pattern = ctx.createPattern(getPaperTexture(), 'repeat');
     ctx.globalCompositeOperation = frameStyle === 'noir' ? 'overlay' : 'multiply';
-    ctx.globalAlpha = frameStyle === 'noir' ? 0.10 : 0.55;
+    ctx.globalAlpha = frameStyle === 'noir' ? 0.10 : 0.25; // Lightened to keep look natural over white paper surfaces
     ctx.fillStyle = pattern;
     ctx.fillRect(0, 0, cardWidth, cardHeight);
     ctx.restore();
@@ -562,7 +661,7 @@
       const slotImgState = sourceImages[index];
 
       if (!slotImgState) {
-        ctx.fillStyle = frameStyle === 'noir' ? '#2a2622' : '#e3d9c0';
+        ctx.fillStyle = frameStyle === 'noir' ? '#2a2622' : '#f0ebdf';
         ctx.fillRect(slot.x, slot.y, slot.w, slot.h);
       } else {
         const photoCanvas = document.createElement('canvas');
@@ -598,7 +697,7 @@
         ctx.drawImage(photoCanvas, slot.x, slot.y);
       }
 
-      ctx.strokeStyle = 'rgba(0,0,0,.18)';
+      ctx.strokeStyle = 'rgba(0,0,0,.12)';
       ctx.lineWidth = 1;
       ctx.strokeRect(slot.x + 0.5, slot.y + 0.5, slot.w - 1, slot.h - 1);
     });

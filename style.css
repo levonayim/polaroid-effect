@@ -1,7 +1,7 @@
 :root{
   --bg:#15120d;
   --bg-soft:#1c1812;
-  --paper:#f4eedd;
+  --paper:#ffffff; /* Updated to pure gallery white for classic frames */
   --paper-shadow:#d8cdae;
   --ink:#2b2622;
   --accent:#b33a3a;
@@ -19,7 +19,7 @@ body{
     radial-gradient(ellipse at 20% -10%, rgba(179,58,58,.10), transparent 55%),
     radial-gradient(ellipse at 90% 110%, rgba(179,58,58,.08), transparent 50%),
     var(--bg);
-  color:var(--paper);
+  color:#f4eedd;
   font-family:var(--mono);
   min-height:100vh;
   -webkit-font-smoothing:antialiased;
@@ -61,7 +61,7 @@ h1{
   line-height:1.05;
   margin:10px 0 0;
   max-width:640px;
-  color:var(--paper);
+  color:#f4eedd;
 }
 h1 em{
   font-style:italic;
@@ -150,7 +150,7 @@ main{
   transform:translateX(-50%);
   font-size:10.5px;
   letter-spacing:.04em;
-  color:var(--paper);
+  color:#f4eedd;
   background:rgba(0,0,0,.55);
   padding:7px 14px;
   border-radius:20px;
@@ -217,9 +217,10 @@ main{
   font-style:italic;
   font-weight:500;
   font-size:18px;
-  margin:0 0 20px;
-  color:var(--paper);
+  margin:24px 0 20px;
+  color:#f4eedd;
 }
+.rail h2:first-child{margin-top:0;}
 .field{
   margin-bottom:20px;
 }
@@ -233,6 +234,40 @@ main{
   margin-bottom:8px;
 }
 .field label span.val{color:var(--accent);}
+
+/* Dropdown styling */
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+select {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 10px;
+  color:#f4eedd;
+  font-family: var(--mono);
+  font-size: 11px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+select:focus {
+  border-color: var(--accent);
+}
+.select-wrapper::after {
+  content: '▼';
+  font-size: 8px;
+  color: var(--muted);
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 input[type=range]{
   -webkit-appearance:none;
   width:100%;
@@ -259,7 +294,7 @@ input[type=text]{
   border:1px solid var(--line);
   border-radius:2px;
   padding:9px 10px;
-  color:var(--paper);
+  color:#f4eedd;
   font-family:var(--hand);
   font-size:18px;
   outline:none;
@@ -287,7 +322,7 @@ input[type=text]::placeholder{color:var(--muted);font-family:var(--mono);font-si
   position:absolute;
   top:2px;left:2px;
   width:16px;height:16px;
-  background:var(--paper);
+  background:var(--bg-soft);
   border-radius:50%;
   transition:left .2s;
 }
@@ -323,12 +358,12 @@ input[type=text]::placeholder{color:var(--muted);font-family:var(--mono);font-si
 button.primary{
   width:100%;
   background:var(--accent);
-  color:var(--paper);
+  color:#f4eedd;
   border:none;
   padding:14px;
   font-family:var(--mono);
   font-size:12px;
-  letter-spacing:.1em;
+  letter-spacing Clyde .1em;
   text-transform:uppercase;
   border-radius:2px;
   cursor:pointer;
@@ -353,7 +388,7 @@ button.ghost{
   border-radius:2px;
   cursor:pointer;
 }
-button.ghost:hover{color:var(--paper);border-color:var(--paper);}
+button.ghost:hover{color:#f4eedd;border-color:#f4eedd;}
 
 .note{
   font-size:10.5px;

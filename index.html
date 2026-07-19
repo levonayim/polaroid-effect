@@ -6,7 +6,6 @@
   <title>Polaroid Lab</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
-  <!-- Link to external stylesheet -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -69,6 +68,35 @@
       <h2>Develop</h2>
 
       <div class="field">
+        <label>Filter Look</label>
+        <div class="select-wrapper">
+          <select id="filterSelect">
+            <option value="none">Normal (Original Chemistry)</option>
+            <option value="clarendon">Clarendon (Bright & High Contrast)</option>
+            <option value="juno">Juno (Warm Tone & Vivid)</option>
+            <option value="lark">Lark (Cool & Desaturated Greens)</option>
+            <option value="reyes">Reyes (Vintage & Dusty Fade)</option>
+            <option value="valencia">Valencia (Antique Warm Glow)</option>
+            <option value="gotham">Gotham (Moody Cinematic Noir)</option>
+            <option value="xpro2">X-Pro II (Hard Cross-Process)</option>
+            <option value="lofi">Lo-Fi (Deep Shadows & Saturation)</option>
+            <option value="aden">Aden (Soft Pastel Hue)</option>
+            <option value="perpetua">Perpetua (Earthy & Cool Highlights)</option>
+            <option value="crema">Crema (Creamy Warm Matte)</option>
+            <option value="ludwig">Ludwig (Clean Red Enhancements)</option>
+            <option value="slumber">Slumber (Dreamy Warm Vintage Yellow)</option>
+            <option value="gingham">Gingham (Washed Out Retro Faded)</option>
+            <option value="mayfair">Mayfair (Soft Pink Warm Border-Glow)</option>
+            <option value="rise">Rise (Morning Sun Glow)</option>
+            <option value="hudson">Hudson (Deep Icy Cool Frost)</option>
+            <option value="sierra">Sierra (Soft Foggy Autumn Glow)</option>
+            <option value="willow">Willow (Soft Monochrome Matte)</option>
+            <option value="inkwell">Inkwell (High Contrast Black & White)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
         <label>Fade <span class="val" id="fadeVal">55</span></label>
         <input type="range" id="fadeSlider" min="0" max="100" value="55">
       </div>
@@ -91,7 +119,7 @@
       <div class="field">
         <label>Frame</label>
         <div class="segmented" id="frameSeg">
-          <button class="active" data-frame="classic">Classic</button>
+          <button class="active" data-frame="classic">Classic White</button>
           <button data-frame="noir">Noir</button>
         </div>
       </div>
@@ -116,7 +144,6 @@
   </main>
 </div>
 
-<!-- Load application script logic at the base of the body element -->
 <script src="app.js"></script>
 </body>
 </html>
