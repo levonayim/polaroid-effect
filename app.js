@@ -59,14 +59,15 @@
   let cardHeight = 904;
   let layoutSlots = []; 
   let activeSlotIndex = null; 
+  let uploadTargetIndex = null; // Tracks if a user is targeting a single precise slot
 
   const activePointers = new Map();
   let pinchStartDist = null;
   let pinchStartZoom = 1;
   let lastSingleX = null, lastSingleY = null;
+  let dragDistance = 0; // Tracks motion threshold to distinguish pans from taps
   let rafPending = false;
 
-  // Ordered list of integrated filter keys to map mobile touch rotations
   const filtersList = [
     'none', 'clarendon', 'juno', 'lark', 'reyes', 'valencia', 'gotham', 
     'xpro2', 'lofi', 'aden', 'perpetua', 'crema', 'ludwig', 'slumber', 
@@ -133,7 +134,6 @@
     photoStage.style.width = ((cardWidth - marginSide * 2) / cardWidth * 100) + '%';
     photoStage.style.height = ((cardHeight - marginTop - marginBottom) / cardHeight * 100) + '%';
     
-    // Sync quick-label updates
     if (currentRatio === 'square') camRatioLabel.textContent = "1:1";
     if (currentRatio === 'mini') camRatioLabel.textContent = "3:4";
     if (currentRatio === 'wide') camRatioLabel.textContent = "16:9";
@@ -205,9 +205,11 @@
   }
 
   photoStage.addEventListener('pointerdown', e => {
-    if (sourceImages.length === 0) return;
     photoStage.setPointerCapture(e.pointerId);
-    if (activePointers.size === 0) activeSlotIndex = determineSlotIndexFromEvent(e);
+    if (activePointers.size === 0) {
+      activeSlotIndex = determineSlotIndexFromEvent(e);
+      dragDistance = 0;
+    }
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (activePointers.size === 2){
       const pts = [...activePointers.values()];
@@ -233,6 +235,7 @@
       } else if (activePointers.size === 1){
         const dxScreen = e.clientX - lastSingleX;
         const dyScreen = e.clientY - lastSingleY;
+        dragDistance += Math.hypot(dxScreen, dyScreen);
         lastSingleX = e.clientX;
         lastSingleY = e.clientY;
         panBy(dxScreen, dyScreen);
@@ -242,6 +245,13 @@
   });
 
   function endPointer(e){
+    // If the pointer finishes under a tiny motion threshold, treat it as a deliberate single slot tap
+    if (activePointers.size === 1 && dragDistance < 6) {
+      uploadTargetIndex = activeSlotIndex;
+      fileInput.removeAttribute('multiple');
+      fileInput.click();
+    }
+
     activePointers.delete(e.pointerId);
     if (activePointers.size === 1){
       const p = [...activePointers.values()][0];
@@ -268,7 +278,12 @@
     }
   }, { passive: false });
 
-  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('click', () => {
+    uploadTargetIndex = null; // Standard master deck drop distributes images sequentially
+    fileInput.setAttribute('multiple', 'multiple');
+    fileInput.click();
+  });
+  
   fileInput.addEventListener('change', e => {
     if (e.target.files && e.target.files.length > 0) loadFiles(e.target.files);
   });
@@ -287,37 +302,65 @@
   });
   dropzone.addEventListener('drop', e => {
     const files = e.dataTransfer.files;
+    uploadTargetIndex = null;
+    fileInput.setAttribute('multiple', 'multiple');
     if (files && files.length > 0) loadFiles(files);
   });
 
   function loadFiles(files) {
-    let filesArray = Array.from(files).filter(f => f.type.startsWith('image/')).slice(0, currentCount);
+    let filesArray = Array.from(files).filter(f => f.type.startsWith('image/'));
     if (filesArray.length === 0) return;
 
-    sourceImages = [];
-    let loadedCounter = 0;
-
-    filesArray.forEach((file, index) => {
+    if (uploadTargetIndex !== null) {
+      // Isolated pipeline execution targeted to one explicit canvas sub-slot partition
       const reader = new FileReader();
       reader.onload = evt => {
         const img = new Image();
         img.onload = () => {
-          sourceImages[index] = {
+          sourceImages[uploadTargetIndex] = {
             img: img,
             zoom: 1,
             cx: img.naturalWidth / 2,
             cy: img.naturalHeight / 2
           };
-          loadedCounter++;
-          if (loadedCounter === filesArray.length) finalizeAssetPipeline();
+          dropzone.classList.add('hidden');
+          photoStage.classList.add('active');
+          saveBtn.disabled = false;
+          mobileSaveBtn.disabled = false;
+          render();
+          triggerDevelop();
         };
         img.src = evt.target.result;
       };
-      reader.readAsDataURL(file);
-    });
+      reader.readAsDataURL(filesArray[0]);
+    } else {
+      // Master distribution mode over all slots sequential order
+      let loadedCounter = 0;
+      let limit = Math.min(filesArray.length, currentCount);
+
+      filesArray.slice(0, limit).forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = evt => {
+          const img = new Image();
+          img.onload = () => {
+            sourceImages[index] = {
+              img: img,
+              zoom: 1,
+              cx: img.naturalWidth / 2,
+              cy: img.naturalHeight / 2
+            };
+            loadedCounter++;
+            if (loadedCounter === limit) finalizeAssetPipeline();
+          };
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
   }
 
   function finalizeAssetPipeline() {
+    // Fill empty remaining spots using the first valid element asset if needed as a padding architecture
     for (let i = 0; i < currentCount; i++) {
       if (!sourceImages[i] && sourceImages[0]) {
         sourceImages[i] = {
@@ -359,15 +402,11 @@
   resetBtn.addEventListener('click', runGlobalReset);
   mobileResetBtn.addEventListener('click', runGlobalReset);
 
-  // ---------- Camera-Icon Selection Routing Controls ----------
   camRatioBtn.addEventListener('click', () => {
     const ratios = ['square', 'mini', 'wide'];
     let nextIdx = (ratios.indexOf(currentRatio) + 1) % ratios.length;
     currentRatio = ratios[nextIdx];
-    
-    // Sync back to desktop selector segments
     [...ratioSeg.children].forEach(b => b.classList.toggle('active', b.dataset.ratio === currentRatio));
-    
     recalculateCardArchitecture();
     render();
   });
@@ -376,9 +415,7 @@
     currentCount = (currentCount % 3) + 1;
     camOrientBtn.style.display = currentCount > 1 ? 'flex' : 'none';
     orientationField.style.display = currentCount > 1 ? 'block' : 'none';
-    
     [...countSeg.children].forEach(b => b.classList.toggle('active', parseInt(b.dataset.count, 10) === currentCount));
-    
     recalculateCardArchitecture();
     if (sourceImages.length > 0) finalizeAssetPipeline();
     else render();
@@ -395,14 +432,11 @@
     let nextIdx = (filtersList.indexOf(currentFilter) + 1) % filtersList.length;
     currentFilter = filtersList[nextIdx];
     filterSelect.value = currentFilter;
-    
-    // Flash name alert banner on viewfinder screen
     const prettyName = filterSelect.options[filterSelect.selectedIndex].text.split(' (')[0];
     filterToast.textContent = prettyName;
     filterToast.classList.add('show');
     clearTimeout(window._toastT);
     window._toastT = setTimeout(() => filterToast.classList.remove('show'), 1000);
-    
     render();
   });
 
@@ -420,11 +454,9 @@
     render();
   });
 
-  // Slide-Up Bottom Sheet Navigation Events
   mobileMenuToggle.addEventListener('click', () => controlsRail.classList.add('open'));
   closeRailBtn.addEventListener('click', () => controlsRail.classList.remove('open'));
 
-  // ---------- Desktop Synchronizers Sync Routing ----------
   ratioSeg.addEventListener('click', e => {
     const btn = e.target.closest('button'); if (!btn) return;
     [...ratioSeg.children].forEach(b => b.classList.remove('active'));
@@ -483,23 +515,45 @@
     cardWrap.style.transform = `rotate(${deg}deg)`;
   }
 
+  // ---------- Bulletproof Aspect Scale & Object-Cover Calculation Engine ----------
   function getCropRect(img, zoom, cx, cy, targetW, targetH){
-    const iw = img.naturalWidth, ih = img.naturalHeight;
-    const aspectImage = iw / ih;
-    const aspectTarget = targetW / targetH;
-    let baseScaleW, baseScaleH;
-    if (aspectImage > aspectTarget) {
-      baseScaleH = ih; baseScaleW = ih * aspectTarget;
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+    
+    let sw = iw;
+    let sh = ih;
+    const targetAspect = targetW / targetH;
+    const imgAspect = iw / ih;
+    
+    if (imgAspect > targetAspect) {
+      // Image is wider than the frame container -> sample height fully, slice proportional width components
+      sw = ih * targetAspect;
+      sh = ih;
     } else {
-      baseScaleW = iw; baseScaleH = iw / aspectTarget;
+      // Image is taller than the frame container -> sample width fully, slice proportional height components
+      sw = iw;
+      sh = iw / targetAspect;
     }
-    const cropW = baseScaleW / zoom;
-    const cropH = baseScaleH / zoom;
-    let sx = cx - cropW / 2;
-    let sy = cy - cropH / 2;
-    sx = Math.max(0, Math.min(iw - cropW, sx));
-    sy = Math.max(0, Math.min(ih - cropH, sy));
-    return { sx, sy, sw: cropW, sh: cropH };
+    
+    // Zoom modifies sample window parameters securely
+    sw /= zoom;
+    sh /= zoom;
+    
+    // Align core crop boundaries centered around the target pixel structural coordinates
+    let sx = cx - sw / 2;
+    let sy = cy - sh / 2;
+    
+    // Clamp to valid canvas assets geometry vectors strictly
+    if (sx < 0) sx = 0;
+    if (sy < 0) sy = 0;
+    if (sx + sw > iw) sx = iw - sw;
+    if (sy + sh > ih) sy = ih - sh;
+    
+    // Hard protective scaling boundaries logic parameters setup fallback
+    if (sw > iw) { sx = 0; sw = iw; }
+    if (sh > ih) { sy = 0; sh = ih; }
+    
+    return { sx, sy, sw, sh };
   }
 
   function processInstagramFilter(r, g, b, filterName) {
@@ -608,7 +662,7 @@
         const photoCanvas = document.createElement('canvas'); photoCanvas.width = slot.w; photoCanvas.height = slot.h;
         const pctx = photoCanvas.getContext('2d');
         const crop = getCropRect(slotImgState.img, slotImgState.zoom, slotImgState.cx, slotImgState.cy, slot.w, slot.h);
-        slotImgState.cx = crop.sx + crop.sw / 2; slotImgState.cy = crop.sy + crop.sh / 2;
+        
         pctx.drawImage(slotImgState.img, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, slot.w, slot.h);
 
         applyFilmEffect(pctx, slot.w, slot.h, parseInt(fadeSlider.value, 10), parseInt(grainSlider.value, 10));
@@ -642,7 +696,6 @@
   updateTilt();
   render();
 
-  // ---------- Combined Export Compilation Engine Pipeline ----------
   function executeTriggerExport() {
     if (sourceImages.length === 0) return;
     const angleDeg = parseInt(tiltSlider.value, 10);
