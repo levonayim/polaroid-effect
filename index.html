@@ -139,6 +139,35 @@
     opacity:0;
     pointer-events:none;
   }
+  .photo-stage{
+    position:absolute;
+    touch-action:none;
+    cursor:grab;
+    pointer-events:none;
+  }
+  .photo-stage.active{
+    pointer-events:auto;
+  }
+  .photo-stage:active{
+    cursor:grabbing;
+  }
+  .stage-hint{
+    position:absolute;
+    bottom:14px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:10.5px;
+    letter-spacing:.04em;
+    color:var(--paper);
+    background:rgba(0,0,0,.55);
+    padding:7px 14px;
+    border-radius:20px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .4s ease;
+    white-space:nowrap;
+  }
+  .stage-hint.show{opacity:1;}
   .card-wrap.developing .flash{
     animation:develop-flash 1.7s ease-out forwards;
   }
@@ -358,7 +387,9 @@
       <div class="card-wrap" id="cardWrap">
         <canvas id="cardCanvas" width="760" height="904"></canvas>
         <div class="flash" id="flash"></div>
+        <div class="photo-stage" id="photoStage"></div>
       </div>
+      <div class="stage-hint" id="stageHint">Pinch or scroll to zoom · drag to reposition</div>
       <div class="dropzone" id="dropzone">
         <div class="dropzone-icon">↑</div>
         <p>Drop an image here<br>or click to choose one</p>
@@ -426,6 +457,8 @@
   const fileInput = document.getElementById('fileInput');
   const cardWrap = document.getElementById('cardWrap');
   const flash = document.getElementById('flash');
+  const photoStage = document.getElementById('photoStage');
+  const stageHint = document.getElementById('stageHint');
   const saveBtn = document.getElementById('saveBtn');
   const resetBtn = document.getElementById('resetBtn');
 
@@ -448,9 +481,132 @@
   const CAPTION_BAND = 190;
   const CARD_H = MARGIN + PHOTO_SIZE + CAPTION_BAND;
 
+  // position the interactive overlay exactly over the photo area, in % so it
+  // tracks the canvas regardless of its displayed CSS size
+  photoStage.style.left = (MARGIN / CARD_W * 100) + '%';
+  photoStage.style.top = (MARGIN / CARD_H * 100) + '%';
+  photoStage.style.width = (PHOTO_SIZE / CARD_W * 100) + '%';
+  photoStage.style.height = (PHOTO_SIZE / CARD_H * 100) + '%';
+
   let sourceImage = null;
   let dateStampEnabled = true;
   let frameStyle = 'classic';
+
+  // ---------- Zoom & pan state (in source-image natural pixels) ----------
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 8;
+  let imgZoom = 1;
+  let imgCx = 0, imgCy = 0; // center of the crop window, in natural image px
+  const activePointers = new Map();
+  let pinchStartDist = null;
+  let pinchStartZoom = 1;
+  let lastSingleX = null, lastSingleY = null;
+  let rafPending = false;
+
+  function scheduleRender(){
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => { rafPending = false; render(); });
+  }
+
+  function setZoom(z){
+    imgZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z));
+  }
+
+  function currentAngleRad(){
+    return parseInt(tiltSlider.value, 10) * Math.PI / 180;
+  }
+
+  // rotate a screen-space delta back into the card's own local (unrotated) axes
+  function toLocalDelta(dx, dy){
+    const a = -currentAngleRad();
+    return {
+      dx: dx * Math.cos(a) - dy * Math.sin(a),
+      dy: dx * Math.sin(a) + dy * Math.cos(a)
+    };
+  }
+
+  function panBy(dxScreen, dyScreen){
+    if (!sourceImage) return;
+    const local = toLocalDelta(dxScreen, dyScreen);
+    const displayScale = canvas.clientWidth / canvas.width; // CSS px per canvas px
+    const localCanvasDx = local.dx / displayScale;
+    const localCanvasDy = local.dy / displayScale;
+    const side = Math.min(sourceImage.naturalWidth, sourceImage.naturalHeight) / imgZoom;
+    const imageDx = localCanvasDx * (side / PHOTO_SIZE);
+    const imageDy = localCanvasDy * (side / PHOTO_SIZE);
+    imgCx -= imageDx;
+    imgCy -= imageDy;
+  }
+
+  function showHint(){
+    stageHint.classList.add('show');
+    clearTimeout(showHint._t);
+    showHint._t = setTimeout(() => stageHint.classList.remove('show'), 2600);
+  }
+
+  photoStage.addEventListener('pointerdown', e => {
+    if (!sourceImage) return;
+    photoStage.setPointerCapture(e.pointerId);
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (activePointers.size === 2){
+      const pts = [...activePointers.values()];
+      pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      pinchStartZoom = imgZoom;
+    } else if (activePointers.size === 1){
+      lastSingleX = e.clientX;
+      lastSingleY = e.clientY;
+    }
+  });
+
+  photoStage.addEventListener('pointermove', e => {
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointers.size === 2){
+      const pts = [...activePointers.values()];
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (pinchStartDist){
+        setZoom(pinchStartZoom * (dist / pinchStartDist));
+      }
+    } else if (activePointers.size === 1){
+      const dxScreen = e.clientX - lastSingleX;
+      const dyScreen = e.clientY - lastSingleY;
+      lastSingleX = e.clientX;
+      lastSingleY = e.clientY;
+      panBy(dxScreen, dyScreen);
+    }
+    scheduleRender();
+  });
+
+  function endPointer(e){
+    activePointers.delete(e.pointerId);
+    if (activePointers.size === 1){
+      const p = [...activePointers.values()][0];
+      lastSingleX = p.x;
+      lastSingleY = p.y;
+    }
+    if (activePointers.size < 2) pinchStartDist = null;
+  }
+  photoStage.addEventListener('pointerup', endPointer);
+  photoStage.addEventListener('pointercancel', endPointer);
+  photoStage.addEventListener('pointerleave', e => { if (e.buttons === 0) endPointer(e); });
+
+  photoStage.addEventListener('wheel', e => {
+    if (!sourceImage) return;
+    e.preventDefault();
+    const factor = Math.exp(-e.deltaY * 0.0015);
+    setZoom(imgZoom * factor);
+    scheduleRender();
+  }, { passive: false });
+
+  photoStage.addEventListener('dblclick', () => {
+    if (!sourceImage) return;
+    imgZoom = 1;
+    imgCx = sourceImage.naturalWidth / 2;
+    imgCy = sourceImage.naturalHeight / 2;
+    render();
+  });
 
   // ---------- Upload handling ----------
   dropzone.addEventListener('click', () => fileInput.click());
@@ -481,10 +637,15 @@
       const img = new Image();
       img.onload = () => {
         sourceImage = img;
+        imgZoom = 1;
+        imgCx = img.naturalWidth / 2;
+        imgCy = img.naturalHeight / 2;
         dropzone.classList.add('hidden');
+        photoStage.classList.add('active');
         saveBtn.disabled = false;
         render();
         triggerDevelop();
+        showHint();
       };
       img.src = evt.target.result;
     };
@@ -499,8 +660,11 @@
 
   resetBtn.addEventListener('click', () => {
     sourceImage = null;
+    imgZoom = 1;
     saveBtn.disabled = true;
     dropzone.classList.remove('hidden');
+    photoStage.classList.remove('active');
+    stageHint.classList.remove('show');
     fileInput.value = '';
     captionInput.value = '';
     ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -534,23 +698,16 @@
   }
   updateTilt();
 
-  // ---------- Cover-fit crop ----------
-  function coverRect(imgW, imgH, targetW, targetH){
-    const srcRatio = imgW / imgH;
-    const dstRatio = targetW / targetH;
-    let sw, sh, sx, sy;
-    if (srcRatio > dstRatio){
-      sh = imgH;
-      sw = imgH * dstRatio;
-      sx = (imgW - sw) / 2;
-      sy = 0;
-    } else {
-      sw = imgW;
-      sh = imgW / dstRatio;
-      sx = 0;
-      sy = (imgH - sh) / 2;
-    }
-    return {sx, sy, sw, sh};
+  // ---------- Zoom/pan-aware square crop ----------
+  function getCropRect(img, zoom, cx, cy){
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const side0 = Math.min(iw, ih);
+    const side = side0 / zoom;
+    let sx = cx - side / 2;
+    let sy = cy - side / 2;
+    sx = Math.max(0, Math.min(iw - side, sx));
+    sy = Math.max(0, Math.min(ih - side, sy));
+    return { sx, sy, side };
   }
 
   // ---------- Film effect ----------
@@ -705,8 +862,10 @@
     photoCanvas.width = PHOTO_SIZE;
     photoCanvas.height = PHOTO_SIZE;
     const pctx = photoCanvas.getContext('2d');
-    const crop = coverRect(sourceImage.naturalWidth, sourceImage.naturalHeight, PHOTO_SIZE, PHOTO_SIZE);
-    pctx.drawImage(sourceImage, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
+    const crop = getCropRect(sourceImage, imgZoom, imgCx, imgCy);
+    imgCx = crop.sx + crop.side / 2;
+    imgCy = crop.sy + crop.side / 2;
+    pctx.drawImage(sourceImage, crop.sx, crop.sy, crop.side, crop.side, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
 
     applyFilmEffect(pctx, PHOTO_SIZE, parseInt(fadeSlider.value,10), parseInt(grainSlider.value,10));
     applyHaze(photoCanvas, PHOTO_SIZE, parseInt(hazeSlider.value,10));
