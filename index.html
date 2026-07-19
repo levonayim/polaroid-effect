@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Polaroid Lab</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=IBM+Plex+Mono:wght@400;500&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
@@ -11,7 +11,7 @@
 <body>
 
 <div class="app">
-  <header>
+  <header class="desktop-only">
     <div>
       <div class="eyebrow">Instant Film Utility</div>
       <h1>Feed it a photo,<br>pull it back <em>warm</em>.</h1>
@@ -20,78 +20,137 @@
   </header>
 
   <main>
+    <!-- Light Table / Camera Viewfinder -->
     <div class="table">
-      <div class="table-label">Light table — preview</div>
+      <div class="table-label desktop-only">Light table — preview</div>
+      
       <div class="card-wrap" id="cardWrap">
         <canvas id="cardCanvas" width="760" height="904"></canvas>
         <div class="flash" id="flash"></div>
         <div class="photo-stage" id="photoStage"></div>
       </div>
-      <div class="stage-hint" id="stageHint">Pinch/scroll to zoom · drag to adjust specific photo</div>
+      
+      <div class="stage-hint desktop-only" id="stageHint">Pinch/scroll to zoom · drag to adjust specific photo</div>
+      
       <div class="dropzone" id="dropzone">
         <div class="dropzone-icon">↑</div>
         <p>Drop images here<br>or click to choose assets</p>
         <p class="hint">Select up to 3 images (JPG, PNG, WEBP)</p>
       </div>
       <input type="file" id="fileInput" accept="image/*" multiple>
+
+      <!-- Mobile Native Quick-Settings Bar Overlay -->
+      <div class="mobile-camera-bar">
+        <!-- Aspect Ratio Quick Toggle -->
+        <button type="button" class="cam-icon-btn active" id="camRatioBtn" title="Aspect Ratio">
+          <span class="ratio-text" id="camRatioLabel">1:1</span>
+        </button>
+        <!-- Photo Count Quick Toggle -->
+        <button type="button" class="cam-icon-btn" id="camCountBtn" title="Photo Count">
+          <span class="count-text" id="camCountLabel">1P</span>
+        </button>
+        <!-- Strip Orientation Quick Toggle -->
+        <button type="button" class="cam-icon-btn" id="camOrientBtn" title="Orientation" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z"/></svg>
+        </button>
+        <!-- Filter Quick Selector Sequence -->
+        <button type="button" class="cam-icon-btn" id="camFilterBtn" title="Cycle Filter">
+          <svg viewBox="0 0 24 24"><path d="M12 22C6.49 22 2 17.51 2 12S6.49 2 12 2s10 4.49 10 10-4.49 10-10 10zm0-18c-4.41 0-8 3.59-8 8s3.59 8 8 8 8-3.59 8-8-3.59-8-8-8zm-1 3h2v2h-2zm0 4h2v6h-2z"/></svg>
+        </button>
+        <!-- Frame Style Quick Toggle -->
+        <button type="button" class="cam-icon-btn" id="camFrameBtn" title="Toggle Frame Profile">
+          <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/></svg>
+        </button>
+        <!-- Date Stamp Toggle -->
+        <button type="button" class="cam-icon-btn active" id="camDateBtn" title="Toggle Date Stamp">
+          <svg viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>
+        </button>
+      </div>
+
+      <!-- Active Filter Banner Notification for Mobile Viewports -->
+      <div class="mobile-filter-toast" id="filterToast">Normal</div>
+
+      <!-- Mobile Native Shutter Deck Area -->
+      <div class="mobile-shutter-deck">
+        <!-- Reset / Start Over Thumbnail Link -->
+        <button type="button" class="shutter-side-btn" id="mobileResetBtn" title="Reset">
+          <div class="reset-icon-inner">✕</div>
+        </button>
+
+        <!-- Master Export Shutter Trigger Button -->
+        <button type="button" class="shutter-trigger" id="mobileSaveBtn" disabled title="Save Transparent PNG">
+          <div class="shutter-core"></div>
+        </button>
+
+        <!-- Desktop Settings Expansion Indicator Trigger -->
+        <button type="button" class="shutter-side-btn" id="mobileMenuToggle" title="Parameters Adjustments">
+          <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        </button>
+      </div>
     </div>
 
-    <div class="rail">
-      <h2>Film Architecture</h2>
+    <!-- Fine-Tuning Parameter Controls Rail -->
+    <div class="rail" id="controlsRail">
+      <div class="rail-header-row">
+        <h2>Parameters Adjustments</h2>
+        <button type="button" class="close-rail-btn" id="closeRailBtn">✕</button>
+      </div>
 
-      <div class="field">
-        <label>Aspect Ratio Size</label>
-        <div class="segmented" id="ratioSeg">
-          <button data-ratio="mini">Mini</button>
-          <button class="active" data-ratio="square">Square</button>
-          <button data-ratio="wide">Wide</button>
+      <div class="desktop-only">
+        <div class="field">
+          <label>Aspect Ratio Size</label>
+          <div class="segmented" id="ratioSeg">
+            <button data-ratio="mini">Mini</button>
+            <button class="active" data-ratio="square">Square</button>
+            <button data-ratio="wide">Wide</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Photo Count</label>
+          <div class="segmented" id="countSeg">
+            <button class="active" data-count="1">1 Photo</button>
+            <button data-count="2">2 Photos</button>
+            <button data-count="3">3 Photos</button>
+          </div>
+        </div>
+
+        <div class="field" id="orientationField" style="display:none;">
+          <label>Strip Orientation</label>
+          <div class="segmented" id="orientSeg">
+            <button class="active" data-orient="vertical">Vertical</button>
+            <button data-orient="horizontal">Horizontal</button>
+          </div>
         </div>
       </div>
 
-      <div class="field">
-        <label>Photo Count</label>
-        <div class="segmented" id="countSeg">
-          <button class="active" data-count="1">1 Photo</button>
-          <button data-count="2">2 Photos</button>
-          <button data-count="3">3 Photos</button>
-        </div>
-      </div>
-
-      <div class="field" id="orientationField" style="display:none;">
-        <label>Strip Orientation</label>
-        <div class="segmented" id="orientSeg">
-          <button class="active" data-orient="vertical">Vertical</button>
-          <button data-orient="horizontal">Horizontal</button>
-        </div>
-      </div>
-
-      <h2>Develop</h2>
+      <h2>Develop Parameters</h2>
 
       <div class="field">
         <label>Filter Look</label>
         <div class="select-wrapper">
           <select id="filterSelect">
             <option value="none">Normal (Original Chemistry)</option>
-            <option value="clarendon">Clarendon (Bright & High Contrast)</option>
-            <option value="juno">Juno (Warm Tone & Vivid)</option>
-            <option value="lark">Lark (Cool & Desaturated Greens)</option>
-            <option value="reyes">Reyes (Vintage & Dusty Fade)</option>
+            <option value="clarendon">Clarendon (Bright & Contrast)</option>
+            <option value="juno">Juno (Warm & Vivid)</option>
+            <option value="lark">Lark (Cool Blues/Greens)</option>
+            <option value="reyes">Reyes (Vintage Dusty Fade)</option>
             <option value="valencia">Valencia (Antique Warm Glow)</option>
-            <option value="gotham">Gotham (Moody Cinematic Noir)</option>
+            <option value="gotham">Gotham (Cinematic Noir)</option>
             <option value="xpro2">X-Pro II (Hard Cross-Process)</option>
-            <option value="lofi">Lo-Fi (Deep Shadows & Saturation)</option>
+            <option value="lofi">Lo-Fi (Deep Saturation)</option>
             <option value="aden">Aden (Soft Pastel Hue)</option>
-            <option value="perpetua">Perpetua (Earthy & Cool Highlights)</option>
+            <option value="perpetua">Perpetua (Earthy Cool)</option>
             <option value="crema">Crema (Creamy Warm Matte)</option>
-            <option value="ludwig">Ludwig (Clean Red Enhancements)</option>
-            <option value="slumber">Slumber (Dreamy Warm Vintage Yellow)</option>
-            <option value="gingham">Gingham (Washed Out Retro Faded)</option>
-            <option value="mayfair">Mayfair (Soft Pink Warm Border-Glow)</option>
+            <option value="ludwig">Ludwig (Clean Red Pop)</option>
+            <option value="slumber">Slumber (Dreamy Yellow Wash)</option>
+            <option value="gingham">Gingham (Washed Retro Faded)</option>
+            <option value="mayfair">Mayfair (Soft Pink Glow)</option>
             <option value="rise">Rise (Morning Sun Glow)</option>
-            <option value="hudson">Hudson (Deep Icy Cool Frost)</option>
-            <option value="sierra">Sierra (Soft Foggy Autumn Glow)</option>
-            <option value="willow">Willow (Soft Monochrome Matte)</option>
-            <option value="inkwell">Inkwell (High Contrast Black & White)</option>
+            <option value="hudson">Hudson (Deep Frost Cool)</option>
+            <option value="sierra">Sierra (Soft Autumn Fog)</option>
+            <option value="willow">Willow (Soft Monochrome)</option>
+            <option value="inkwell">Inkwell (Stark Black & White)</option>
           </select>
         </div>
       </div>
@@ -116,7 +175,7 @@
         <input type="range" id="tiltSlider" min="-10" max="10" value="-3">
       </div>
 
-      <div class="field">
+      <div class="field desktop-only">
         <label>Frame</label>
         <div class="segmented" id="frameSeg">
           <button class="active" data-frame="classic">Classic White</button>
@@ -129,12 +188,12 @@
         <input type="text" id="captionInput" placeholder="write on the border…" maxlength="40">
       </div>
 
-      <div class="field toggle-row">
+      <div class="field toggle-row desktop-only">
         <label style="margin:0;">Date stamp</label>
         <div class="switch on" id="dateToggle"></div>
       </div>
 
-      <div class="actions">
+      <div class="actions desktop-only">
         <button class="primary" id="saveBtn" disabled>Save transparent PNG</button>
         <button class="ghost" id="resetBtn">Start over</button>
       </div>
