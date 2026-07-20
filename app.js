@@ -224,16 +224,11 @@
     }
   });
 
-  function endPointer(e){
+function endPointer(e){
     if (activePointers.size === 1 && dragDistance < 6) {
       uploadTargetIndex = activeSlotIndex;
       fileInput.removeAttribute('multiple');
-      fileInput.removeAttribute('capture');
-      
-      // Native system camera capture dialog trigger option setup
-      if (window.innerWidth <= 920) {
-        fileInput.setAttribute('capture', 'environment');
-      }
+      fileInput.removeAttribute('capture'); // Clears direct lock so OS brings up both options
       fileInput.click();
     }
 
@@ -248,6 +243,7 @@
       activeSlotIndex = null;
     }
   }
+  
   photoStage.addEventListener('pointerup', endPointer);
   photoStage.addEventListener('pointercancel', endPointer);
   photoStage.addEventListener('pointerleave', e => { if (e.buttons === 0) endPointer(e); });
@@ -263,9 +259,34 @@
     }
   }, { passive: false });
 
-  dropzone.addEventListener('click', () => {
-    uploadTargetIndex = null; 
-    fileInput.removeAttribute('capture');
+// Connect new dropzone configuration buttons
+  const dropzoneCamBtn = document.getElementById('dropzoneCamBtn');
+  const dropzoneGalleryBtn = document.getElementById('dropzoneGalleryBtn');
+
+  // Stop dropzone container click propagation from bubbling blindly 
+  dropzone.addEventListener('click', e => {
+    if (e.target === dropzone || e.target.tagName === 'P' || e.target.classList.contains('dropzone-icon')) {
+      uploadTargetIndex = null;
+      fileInput.removeAttribute('capture');
+      fileInput.setAttribute('multiple', 'multiple');
+      fileInput.click();
+    }
+  });
+
+  // TAKE PHOTO: Adds capture preference context for mobile nodes
+  dropzoneCamBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    uploadTargetIndex = null;
+    fileInput.removeAttribute('multiple');
+    fileInput.setAttribute('capture', 'environment'); // Signals mobile hardware to load camera app
+    fileInput.click();
+  });
+
+  // OPEN GALLERY: Explicitly wipes capture metadata to ensure device library expands
+  dropzoneGalleryBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    uploadTargetIndex = null;
+    fileInput.removeAttribute('capture'); // Strips hardware capture lock
     fileInput.setAttribute('multiple', 'multiple');
     fileInput.click();
   });

@@ -176,19 +176,17 @@ main{
   100%{filter:contrast(1) brightness(1) saturate(1);}
 }
 
-.dropzone{
-  position:absolute;
-  inset:0;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  cursor:pointer;
-  color:var(--muted);
-  text-align:center;
-  padding:20px;
-  z-index:5;
+.dropzone {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Absolutely centers the block vertically */
+  text-align: center;
+  padding: 40px;
+  z-index: 5;
+  box-sizing: border-box;
 }
 .dropzone.hidden{display:none;}
 .dropzone-icon{
@@ -204,6 +202,69 @@ main{
 .dropzone.drag-over{color:var(--accent);}
 .dropzone.drag-over .dropzone-icon{border-color:var(--accent);}
 #fileInput{display:none;}
+
+.dropzone-actions {
+  display: flex;
+  gap: 16px;
+  margin: 16px 0;
+  z-index: 10;
+  justify-content: center;
+}
+
+.dropzone-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+/* Redesigned Button Actions: Pure Black Outlines & Black Typography */
+.dropzone-btn.primary,
+.dropzone-btn.ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent !important; /* Forces background transparency */
+  border: 2px solid #000000 !important; /* Solid clean black outline */
+  color: #000000 !important; /* Crisp black text styling */
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.dropzone-btn.primary:hover,
+.dropzone-btn.ghost:hover {
+  background: rgba(0, 0, 0, 0.05) !important; /* Gentle hover shift */
+  filter: none !important;
+}
+
+.dropzone-btn svg {
+  fill: #000000 !important; /* Converts all vector icons inside buttons to black */
+}
+
+@media (max-width:920px){
+  .dropzone-actions {
+    flex-direction: column;
+    gap: 10px;
+    width: 80%;
+  }
+  .dropzone-btn.primary,
+  .dropzone-btn.ghost {
+    justify-content: center;
+    width: 100%;
+    padding: 12px;
+  }
+}
 
 /* ---- Controls rail ---- */
 .rail{
