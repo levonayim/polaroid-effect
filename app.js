@@ -224,11 +224,11 @@
     }
   });
 
-function endPointer(e){
+  function endPointer(e){
     if (activePointers.size === 1 && dragDistance < 6) {
       uploadTargetIndex = activeSlotIndex;
       fileInput.removeAttribute('multiple');
-      fileInput.removeAttribute('capture'); // Clears direct lock so OS brings up both options
+      fileInput.removeAttribute('capture');
       fileInput.click();
     }
 
@@ -259,11 +259,9 @@ function endPointer(e){
     }
   }, { passive: false });
 
-// Connect new dropzone configuration buttons
   const dropzoneCamBtn = document.getElementById('dropzoneCamBtn');
   const dropzoneGalleryBtn = document.getElementById('dropzoneGalleryBtn');
 
-  // Stop dropzone container click propagation from bubbling blindly 
   dropzone.addEventListener('click', e => {
     if (e.target === dropzone || e.target.tagName === 'P' || e.target.classList.contains('dropzone-icon')) {
       uploadTargetIndex = null;
@@ -273,20 +271,18 @@ function endPointer(e){
     }
   });
 
-  // TAKE PHOTO: Adds capture preference context for mobile nodes
   dropzoneCamBtn.addEventListener('click', e => {
     e.stopPropagation();
     uploadTargetIndex = null;
     fileInput.removeAttribute('multiple');
-    fileInput.setAttribute('capture', 'environment'); // Signals mobile hardware to load camera app
+    fileInput.setAttribute('capture', 'environment');
     fileInput.click();
   });
 
-  // OPEN GALLERY: Explicitly wipes capture metadata to ensure device library expands
   dropzoneGalleryBtn.addEventListener('click', e => {
     e.stopPropagation();
     uploadTargetIndex = null;
-    fileInput.removeAttribute('capture'); // Strips hardware capture lock
+    fileInput.removeAttribute('capture');
     fileInput.setAttribute('multiple', 'multiple');
     fileInput.click();
   });
@@ -400,6 +396,7 @@ function endPointer(e){
     captionInput.value = '';
     filterSelect.value = 'none';
     currentFilter = 'none';
+    tiltSlider.value = 0; // Wipes old parameters on card flush
     ctx.clearRect(0,0,canvas.width,canvas.height);
     updateTilt();
     render();
@@ -514,6 +511,7 @@ function endPointer(e){
     render();
   });
 
+  // Updated layout engine initialization setting card frame defaults to 0°
   function updateTilt(){
     const deg = parseInt(tiltSlider.value, 10);
     tiltVal.textContent = deg + '°';

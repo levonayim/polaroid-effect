@@ -34,14 +34,14 @@
       
       <div class="dropzone" id="dropzone">
         <div class="dropzone-icon">↑</div>
-        <p>Drag and drop your images here, or</p>
+        <p class="dropzone-title">Drag and drop your images here, or</p>
         <div class="dropzone-actions">
           <button type="button" class="dropzone-btn primary" id="dropzoneCamBtn">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
             Take Photo
           </button>
           <button type="button" class="dropzone-btn ghost" id="dropzoneGalleryBtn">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
             Open Gallery
           </button>
         </div>
@@ -98,7 +98,11 @@
         </button>
 
         <button type="button" class="shutter-trigger" id="mobileSaveBtn" disabled title="Save Transparent PNG">
-          <div class="shutter-core"></div>
+          <div class="shutter-core">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="#000000">
+              <path d="M5 20h14v-2H5v2zm14-9h-4V3H9v8H5l7 7 7-7z"/>
+            </svg>
+          </div>
         </button>
 
         <button type="button" class="shutter-side-btn" id="mobileMenuToggle" title="Parameters Adjustments">
@@ -189,8 +193,8 @@
       </div>
 
       <div class="field">
-        <label>Tilt <span class="val" id="tiltVal">-3°</span></label>
-        <input type="range" id="tiltSlider" min="-10" max="10" value="-3">
+        <label>Tilt <span class="val" id="tiltVal">0°</span></label>
+        <input type="range" id="tiltSlider" min="-10" max="10" value="0">
       </div>
 
       <div class="field desktop-only">
