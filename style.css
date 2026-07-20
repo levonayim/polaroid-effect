@@ -402,18 +402,17 @@ button.ghost:hover{color:#f4eedd;border-color:#f4eedd;}
   opacity:.75;
 }
 
-/* Hide native elements on standard viewport profiles */
 .mobile-camera-bar, .mobile-shutter-deck, .close-rail-btn, .mobile-filter-toast {
   display: none;
 }
 
-/* ---- Responsive Mobile Viewport Overrides (Camera-inspired UI Architecture) ---- */
+/* ---- Responsive Mobile Viewport Overrides (Camera UI Architecture) ---- */
 @media (max-width:920px){
   .desktop-only {
     display: none !important;
   }
   body {
-    background: #000000; /* Dark baseline viewfinder envelope */
+    background: #000000; 
     position: fixed;
     inset: 0;
     overflow: hidden;
@@ -434,7 +433,6 @@ button.ghost:hover{color:#f4eedd;border-color:#f4eedd;}
     position: relative;
   }
   
-  /* Viewfinder Frame Container Container */
   .table {
     border: none;
     border-radius: 0;
@@ -449,10 +447,9 @@ button.ghost:hover{color:#f4eedd;border-color:#f4eedd;}
     position: relative;
   }
   
-  /* Dynamic Canvas Positioning Container Block */
   .card-wrap {
-    margin-top: 80px; /* Offset clear of top settings header */
-    height: calc(100vh - 280px); /* Balance clean framing lines clear of bottom hardware deck */
+    margin-top: 80px; 
+    height: calc(100vh - 280px); 
     width: calc(100vw - 40px);
     display: flex;
     align-items: center;
@@ -499,7 +496,7 @@ button.ghost:hover{color:#f4eedd;border-color:#f4eedd;}
     background: rgba(255, 255, 255, 0.12);
   }
   .cam-icon-btn svg {
-    width: 22px; /* Standardized uniform dimension matching native system tools */
+    width: 22px; 
     height: 22px;
     fill: currentColor;
   }
@@ -511,8 +508,7 @@ button.ghost:hover{color:#f4eedd;border-color:#f4eedd;}
     line-height: 1;
     display: inline-block;
   }
-  
-  /* Filter Notification Alert Badge */
+
   .mobile-filter-toast {
     display: block;
     position: absolute;
@@ -606,7 +602,6 @@ button.ghost:hover{color:#f4eedd;border-color:#f4eedd;}
     font-weight: 400;
   }
 
-  /* ---- Slide-Up Fine-Tuning Sheet Panel ---- */
   .rail {
     position: fixed;
     bottom: 0;

@@ -75,24 +75,22 @@
   ];
 
   function recalculateCardArchitecture() {
-    // 1. Establish the base standalone width/height for a single photo slot
     let baseSlotW = 628; 
-    let baseSlotH = 628; // Square (1:1) default[cite: 1]
+    let baseSlotH = 628; 
 
     if (currentRatio === 'mini') {
       baseSlotW = 448;
-      baseSlotH = 628; // Mini (Portrait 3:4 ratio profile)
+      baseSlotH = 628; 
     } else if (currentRatio === 'wide') {
       baseSlotW = 988;
-      baseSlotH = 628; // Wide (Landscape 16:9 ratio profile)
+      baseSlotH = 628; 
     }
 
     const marginSide = 46;
     const marginTop = 46;
     const marginBottom = 190; 
-    const gap = 16; // Whitespace separator between chained slots
+    const gap = 16; 
 
-    // 2. Expand card dynamically along the target axis depending on photo count
     let photoAreaW = baseSlotW;
     let photoAreaH = baseSlotH;
 
@@ -111,7 +109,6 @@
     canvas.height = cardHeight;
     canvas.style.width = cardWidth + 'px';
 
-    // 3. Map slot placement boxes out with static, un-squished dimensional values
     layoutSlots = [];
     for (let i = 0; i < currentCount; i++) {
       if (currentOrient === 'vertical') {
@@ -131,7 +128,6 @@
       }
     }
 
-    // Sync viewfinder interactive targeting overlay borders perfectly
     photoStage.style.left = (marginSide / cardWidth * 100) + '%';
     photoStage.style.top = (marginTop / cardHeight * 100) + '%';
     photoStage.style.width = (photoAreaW / cardWidth * 100) + '%';
@@ -167,7 +163,6 @@
     const local = toLocalDelta(dxScreen, dyScreen);
     const displayScale = canvas.clientWidth / canvas.width;
 
-    // Fixed cross-axis panning coordinate bug
     slotState.cx += local.dx / displayScale;
     slotState.cy += local.dy / displayScale;
   }
@@ -233,6 +228,12 @@
     if (activePointers.size === 1 && dragDistance < 6) {
       uploadTargetIndex = activeSlotIndex;
       fileInput.removeAttribute('multiple');
+      fileInput.removeAttribute('capture');
+      
+      // Native system camera capture dialog trigger option setup
+      if (window.innerWidth <= 920) {
+        fileInput.setAttribute('capture', 'environment');
+      }
       fileInput.click();
     }
 
@@ -264,6 +265,7 @@
 
   dropzone.addEventListener('click', () => {
     uploadTargetIndex = null; 
+    fileInput.removeAttribute('capture');
     fileInput.setAttribute('multiple', 'multiple');
     fileInput.click();
   });
@@ -287,6 +289,7 @@
   dropzone.addEventListener('drop', e => {
     const files = e.dataTransfer.files;
     uploadTargetIndex = null;
+    fileInput.removeAttribute('capture');
     fileInput.setAttribute('multiple', 'multiple');
     if (files && files.length > 0) loadFiles(files);
   });
