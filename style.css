@@ -503,6 +503,15 @@ button.ghost:hover{color:#f4eedd;border-color:#f4eedd;}
     height: 20px;
     fill: currentColor;
   }
+  .cam-icon-btn .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    line-height: 1;
+    color: currentColor;
+    font-variation-settings: 'opsz' 20, 'wght' 400, 'FILL' 0, 'GRAD' 0;
+  }
   .cam-icon-btn span {
     font-size: 11px;
     font-weight: 600;
