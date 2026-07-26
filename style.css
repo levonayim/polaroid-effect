@@ -29,15 +29,14 @@ body{
   margin:0 auto;
   padding:48px 28px 80px;
 }
-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-end;
-  gap:24px;
-  flex-wrap:wrap;
-  border-bottom:1px solid var(--line);
-  padding-bottom:28px;
-  margin-bottom:44px;
+header {
+  display: flex;
+  flex-direction: column; /* Stacks title section and tagline vertically */
+  align-items: flex-start;  /* Aligns everything cleanly to the left */
+  gap: 16px; /* Controls vertical spacing between title & description */
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 28px;
+  margin-bottom: 44px;
 }
 .eyebrow{
   font-size:11px;
@@ -54,27 +53,26 @@ header{
   background:var(--accent);
   box-shadow:0 0 8px 2px var(--accent-glow);
 }
-h1{
-  font-family:var(--display);
-  font-weight:600;
-  font-size:clamp(30px,4.2vw,46px);
-  line-height:1.05;
-  margin:10px 0 0;
-  max-width:640px;
-  color:#f4eedd;
+h1 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(30px, 4.2vw, 46px);
+  line-height: 1.05;
+  margin: 10px 0 0;
+  max-width: 100%; /* Allows heading to expand full width and wrap dynamically */
+  color: #f4eedd;
 }
 h1 em{
   font-style:italic;
   font-weight:500;
   color:var(--accent);
 }
-.tagline{
-  max-width:300px;
-  font-size:13px;
-  line-height:1.6;
-  color:var(--muted);
+.tagline {
+  max-width: 100%; /* Allows tagline text to span full width under the heading */
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
 }
-
 main{
   display:grid;
   grid-template-columns:1.15fr .85fr;
@@ -188,6 +186,7 @@ main{
   padding: 40px;
   z-index: 5;
   box-sizing: border-box;
+  margin-top: 0;
 }
 .dropzone.hidden{display:none;}
 .dropzone-icon{
@@ -496,6 +495,7 @@ button.ghost:hover{color:#f4eedd;border-color:#f4eedd;}
   .dropzone {
     padding: 20px !important;
     pointer-events: none;
+    margin-top: -50%;
   }
   .dropzone-icon {
     width: 44px !important;
