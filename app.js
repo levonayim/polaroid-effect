@@ -49,7 +49,7 @@
   let currentRatio = 'square'; 
   let currentCount = 1;        
   let currentOrient = 'vertical'; 
-  let currentFilter = 'none';
+  let currentFilter = 'raw';
   
   let sourceImages = []; 
   let dateStampEnabled = true;
@@ -69,7 +69,7 @@
   let rafPending = false;
 
   const filtersList = [
-    'none', 'clarendon', 'juno', 'lark', 'reyes', 'valencia', 'gotham', 
+    'raw', 'none', 'clarendon', 'juno', 'lark', 'reyes', 'valencia', 'gotham', 
     'xpro2', 'lofi', 'aden', 'perpetua', 'crema', 'ludwig', 'slumber', 
     'gingham', 'mayfair', 'rise', 'hudson', 'sierra', 'willow', 'inkwell'
   ];
@@ -394,9 +394,9 @@
     photoStage.classList.remove('active');
     fileInput.value = '';
     captionInput.value = '';
-    filterSelect.value = 'none';
-    currentFilter = 'none';
-    tiltSlider.value = 0; // Wipes old parameters on card flush
+    filterSelect.value = 'raw';
+    currentFilter = 'raw';
+    tiltSlider.value = 0; 
     ctx.clearRect(0,0,canvas.width,canvas.height);
     updateTilt();
     render();
@@ -511,7 +511,6 @@
     render();
   });
 
-  // Updated layout engine initialization setting card frame defaults to 0°
   function updateTilt(){
     const deg = parseInt(tiltSlider.value, 10);
     tiltVal.textContent = deg + '°';
@@ -556,6 +555,8 @@
   }
 
   function applyFilmEffect(photoCtx, w, h, fade, grain){
+    if (currentFilter === 'raw') return; // Skip all chemical shifts on raw photos
+
     const imgData = photoCtx.getImageData(0, 0, w, h);
     const d = imgData.data;
     const f = fade / 100; const g = grain / 100;
@@ -589,6 +590,7 @@
   }
 
   function applyHaze(photoCanvas, w, h, haze){
+    if (currentFilter === 'raw') return; // Skip haze on raw photos
     const hVal = haze / 100; if (hVal <= 0) return;
     const pctx = photoCanvas.getContext('2d');
     const blurPx = 1.5 + hVal * 9;
@@ -650,6 +652,13 @@
           drawW = slot.w * slotImgState.zoom;
           drawH = drawW / imgAspect;
         }
+
+        // Compute edge panning limits to preserve image coverage
+        const maxOffsetW = Math.max(0, (drawW - slot.w) / 2);
+        const maxOffsetH = Math.max(0, (drawH - slot.h) / 2);
+
+        slotImgState.cx = Math.max(-maxOffsetW, Math.min(maxOffsetW, slotImgState.cx));
+        slotImgState.cy = Math.max(-maxOffsetH, Math.min(maxOffsetH, slotImgState.cy));
 
         const xOffset = (slot.w - drawW) / 2 + slotImgState.cx;
         const yOffset = (slot.h - drawH) / 2 + slotImgState.cy;
